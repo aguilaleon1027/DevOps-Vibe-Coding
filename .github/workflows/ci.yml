@@ -19,6 +19,7 @@ jobs:
     steps:
       - name: 1. 저장소 체크아웃
         uses: actions/checkout@v4
+
         
 
       - name: 2. Python 환경 설정 (모델 가중치 생성을 위함)
