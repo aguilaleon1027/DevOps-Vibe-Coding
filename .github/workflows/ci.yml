@@ -55,8 +55,8 @@ jobs:
           push: true
           # 최신 버전 태그(latest) 및 커밋 해시 태그 2개를 동시에 생성
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/workout-recommendation-api:latest
-            ${{ secrets.DOCKER_USERNAME }}/workout-recommendation-api:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:${{ github.sha }}
           # 빌드 시간 단축을 윈한 레지스트리 캐싱 사용
           cache-from: type=gha
           cache-to: type=gha,mode=max
