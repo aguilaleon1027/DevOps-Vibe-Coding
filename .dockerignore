@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.github/
+.env
+
+# 모델 로깅과 데이터는 도커 컨테이너에 불필요하여 제외 (이미 학습된 파일만 COPY)
+mlruns/
+mlflow.db
+data/
+ml_pipeline/
+
+# 로컬 설정 파일
+.vscode/

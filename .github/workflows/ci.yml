@@ -1,0 +1,60 @@
+name: Build and Push API Server to Docker Hub
+
+# Main 브랜치로 코드가 푸시되거나 수동으로 실행될 때 트리거
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  # Docker Hub 이미지 이름 (secret 변수 기반 동적 구성)
+  DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/workout-recommendation-api
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 2. Python 환경 설정 (모델 가중치 생성을 위함)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      # 가중치 파일(.pth)은 Git에 올라가지 않기 때문에, CI 서버에서 가상 데이터를 만들어 학습시키거나
+      # 외부 저장소(S3 등)에서 다운받는 파이프라인이 필요합니다. 
+      # 이 아키텍처는 코드와 데이터 파이프라인이 같이 있으므로, 즉시 훈련하여 최신 가중치를 생성합니다.
+      - name: 3. 머신러닝 요구사항 설치 및 훈련 스크립트 실행
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+          # 학습 진행 (weights/ 폴더와 models/ 폴더가 생성됨)
+          python ml_pipeline/train.py
+
+      - name: 4. Docker Hub 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 5. 최적화를 위한 Docker Buildx 캐시 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: 6. Docker 빌드 및 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # 최신 버전 태그(latest) 및 커밋 해시 태그 2개를 동시에 생성
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:latest
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+          # 빌드 시간 단축을 윈한 레지스트리 캐싱 사용
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:buildcache,mode=max
