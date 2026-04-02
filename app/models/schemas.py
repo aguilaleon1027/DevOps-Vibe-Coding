@@ -6,6 +6,7 @@ class WorkoutRecommendationRequest(BaseModel):
     target_weight: float = Field(..., gt=30, le=200, description="Target weight in kg")
     target_fat: float = Field(..., gt=0, le=50, description="Target body fat percentage")
     target_muscle: float = Field(..., gt=10, le=80, description="Target muscle mass in kg")
+    purpose: int = Field(..., ge=0, le=2, description="Workout Purpose (0: Diet, 1: Bodybuilding, 2: Strength)")
 
 class WorkoutRecommendationResponse(BaseModel):
     recommended_program: int

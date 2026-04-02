@@ -12,7 +12,8 @@ async def get_workout_recommendation(request_data: WorkoutRecommendationRequest)
         float(request_data.gender),
         request_data.target_weight,
         request_data.target_fat,
-        request_data.target_muscle
+        request_data.target_muscle,
+        float(request_data.purpose)
     ]
     
     result = inference_service.predict(features)

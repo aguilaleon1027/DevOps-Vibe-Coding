@@ -10,42 +10,27 @@ on:
 
 env:
   # Docker Hub 이미지 이름 (secret 변수 기반 동적 구성)
-  DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/workout-recommendation-api
+  DOCKER_IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api
 
 jobs:
   build-and-push:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: 1. 저장소 체크아웃
         uses: actions/checkout@v4
 
-
-      - name: Install dependencies
-        run: |
-          python --version  # 내 컴퓨터에 깔린 파이썬이 인식되는지 확인
-          pip install -r requirements.txt
-
-      # 가중치 파일(.pth)은 Git에 올라가지 않기 때문에, CI 서버에서 가상 데이터를 만들어 학습시키거나
-      # 외부 저장소(S3 등)에서 다운받는 파이프라인이 필요합니다. 
-      # 이 아키텍처는 코드와 데이터 파이프라인이 같이 있으므로, 즉시 훈련하여 최신 가중치를 생성합니다.
-      - name: 3. 머신러닝 요구사항 설치 및 훈련 스크립트 실행
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
-          # 학습 진행 (weights/ 폴더와 models/ 폴더가 생성됨)
-          python ml_pipeline/train.py
-
-      - name: 4. Docker Hub 로그인
+      - name: 2. Docker Hub 로그인
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 5. 최적화를 위한 Docker Buildx 캐시 설정
+      - name: 3. 최적화를 위한 Docker Buildx 캐시 설정
         uses: docker/setup-buildx-action@v3
 
-      - name: 6. Docker 빌드 및 푸시
+      # Multi-stage Docker 빌드 안에서 훈련(Trainer) 단계를 거쳐 곧바로 Runner 이미지로 구워집니다.
+      - name: 4. Docker 빌드 및 푸시
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -53,9 +38,9 @@ jobs:
           push: true
           # 최신 버전 태그(latest) 및 커밋 해시 태그 2개를 동시에 생성
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:${{ github.sha }}
-          # 빌드 시간 단축을 윈한 레지스트리 캐싱 사용
+            ${{ env.DOCKER_IMAGE_NAME }}:latest
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+          # 빌드 시간 단축을 위한 레지스트리 캐싱 사용
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -73,7 +58,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 2. 최신 Docker 이미지 Pull
-        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:latest
+        run: docker pull ${{ env.DOCKER_IMAGE_NAME }}:latest
         
       - name: 3. 기존 동작중인 컨테이너 중지
         # 처음 배포할 때는 컨테이너가 없어서 에러가 발생하더라도 다음 스텝으로 넘어가도록 처리
@@ -85,4 +70,4 @@ jobs:
         run: docker rm workout-api-server
         
       - name: 5. 새 컨테이너 백그라운드 구동
-        run: docker run -d --name workout-api-server -p 8000:8000 --restart unless-stopped ${{ secrets.DOCKERHUB_USERNAME }}/workout-recommendation-api:latest
+        run: docker run -d --name workout-api-server -p 8000:8000 --restart unless-stopped ${{ env.DOCKER_IMAGE_NAME }}:latest
