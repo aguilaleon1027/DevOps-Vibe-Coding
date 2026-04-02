@@ -9,7 +9,7 @@ __pycache__/
 mlruns/
 mlflow.db
 data/
-ml_pipeline/
+# ml_pipeline/
 
 # 로컬 설정 파일
 .vscode/
