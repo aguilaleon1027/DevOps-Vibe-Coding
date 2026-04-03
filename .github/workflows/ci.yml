@@ -57,8 +57,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 2. 최신 Docker 이미지 Pull
-        run: docker pull ${{ env.DOCKER_IMAGE_NAME }}:latest
+      - - name: Pull image
+          run: sudo docker pull ***/workout-recommendation-api:latest
         
       - name: 3. 기존 동작중인 컨테이너 중지
         # 처음 배포할 때는 컨테이너가 없어서 에러가 발생하더라도 다음 스텝으로 넘어가도록 처리
